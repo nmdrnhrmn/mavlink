@@ -237,9 +237,8 @@ public class MavlinkConnection {
         try {
             MavlinkPacket packet;
             while ((packet = reader.next()) != null) {
-                Class<?> messageType = getMessageType(packet, Arrays.asList(
-                        systemDialects.getOrDefault(packet.getSystemId(), defaultDialect),
-                        COMMON_DIALECT));
+                MavlinkDialect dialect = systemDialects.getOrDefault(packet.getSystemId(), defaultDialect);
+                Class<?> messageType = getMessageType(packet, dialect);
                 if (messageType != null) {
                     Object payload = deserializer.deserialize(packet.getPayload(), messageType);
                     if (payload instanceof Heartbeat) {

@@ -7,6 +7,7 @@ import io.dronefleet.mavlink.autoquad.AutoquadDialect;
 import io.dronefleet.mavlink.common.CommonDialect;
 import io.dronefleet.mavlink.minimal.MavAutopilot;
 import io.dronefleet.mavlink.minimal.Heartbeat;
+import io.dronefleet.mavlink.minimal.MinimalDialect;
 import io.dronefleet.mavlink.paparazzi.PaparazziDialect;
 import io.dronefleet.mavlink.protocol.MavlinkPacket;
 import io.dronefleet.mavlink.protocol.MavlinkPacketReader;
@@ -50,22 +51,22 @@ public class MavlinkConnection {
             this.in = in;
             this.out = out;
             dialects = new HashMap<>();
-            dialect(MavAutopilot.MAV_AUTOPILOT_GENERIC, new CommonDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_AEROB, new CommonDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_AIRRAILS, new CommonDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_UDB, new CommonDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_SMARTAP, new CommonDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_SMACCMPILOT, new CommonDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_OPENPILOT, new CommonDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_FP, new CommonDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_ARDUPILOTMEGA, new ArdupilotmegaDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_PX4, new ArdupilotmegaDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_AUTOQUAD, new AutoquadDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_ASLUAV, new AsluavDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_SLUGS, new SlugsDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_AUTOQUAD, new AutoquadDialect())
-                    .dialect(MavAutopilot.MAV_AUTOPILOT_PPZ, new PaparazziDialect());
-            defaultDialect = COMMON_DIALECT;
+//            dialect(MavAutopilot.MAV_AUTOPILOT_GENERIC, new CommonDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_AEROB, new CommonDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_AIRRAILS, new CommonDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_UDB, new CommonDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_SMARTAP, new CommonDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_SMACCMPILOT, new CommonDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_OPENPILOT, new CommonDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_FP, new CommonDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_ARDUPILOTMEGA, new ArdupilotmegaDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_PX4, new ArdupilotmegaDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_AUTOQUAD, new AutoquadDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_ASLUAV, new AsluavDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_SLUGS, new SlugsDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_AUTOQUAD, new AutoquadDialect())
+//                    .dialect(MavAutopilot.MAV_AUTOPILOT_PPZ, new PaparazziDialect());
+            defaultDialect = MINIMAL_DIALECT;
         }
 
         /**
@@ -114,6 +115,7 @@ public class MavlinkConnection {
      * with a specific dialect.
      */
     private static MavlinkDialect COMMON_DIALECT = new CommonDialect();
+    private static MavlinkDialect MINIMAL_DIALECT = new MinimalDialect();
 
     /**
      * Creates a new builder for the specified input/output streams.

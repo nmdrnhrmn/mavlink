@@ -268,7 +268,7 @@ public class MavlinkConnection {
             readLock.unlock();
             long currentTime = System.currentTimeMillis();
             long deltaTime = currentTime - prevTime;
-            System.out.println("DELTA_TIME: " + deltaTime);
+            System.out.println("DELTA_TIME: " + deltaTime + " (" + prevTime + ")");
         }
     }
 

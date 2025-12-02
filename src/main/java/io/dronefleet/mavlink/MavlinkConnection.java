@@ -238,8 +238,11 @@ public class MavlinkConnection {
     public MavlinkMessage next() throws IOException {
         readLock.lock();
         try {
-            MavlinkPacket packet;
-            while ((packet = reader.next()) != null) {
+            MavlinkPacket packet = reader.next();
+            if (packet == null) {
+                System.out.println("PACKET_NULL");
+            }
+            while (packet != null) {
                 long prevTime = System.currentTimeMillis();
                 MavlinkDialect dialect = systemDialects.getOrDefault(packet.getSystemId(), defaultDialect);
                 Class<?> messageType = getMessageType(packet, dialect);
@@ -264,6 +267,7 @@ public class MavlinkConnection {
                 long currentTime = System.currentTimeMillis();
                 long deltaTime = currentTime - prevTime;
                 System.out.println("DELTA_TIME: " + deltaTime + " (" + prevTime + ")");
+                packet = reader.next();
             }
 
             throw new EOFException("End of stream");

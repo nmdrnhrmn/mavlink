@@ -16,6 +16,7 @@ import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadSerializer;
 import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadDeserializer;
 import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadSerializer;
 import io.dronefleet.mavlink.slugs.SlugsDialect;
+import sun.rmi.runtime.Log;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -242,7 +243,11 @@ public class MavlinkConnection {
                 MavlinkDialect dialect = systemDialects.getOrDefault(packet.getSystemId(), defaultDialect);
                 Class<?> messageType = getMessageType(packet, dialect);
                 if (messageType != null) {
+                    long prevTime = System.currentTimeMillis();
                     Object payload = deserializer.deserialize(packet.getPayload(), messageType);
+                    long currentTime = System.currentTimeMillis();
+                    long deltaTime = currentTime - prevTime;
+                    System.out.println("DELTA_TIME: " + deltaTime);
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {

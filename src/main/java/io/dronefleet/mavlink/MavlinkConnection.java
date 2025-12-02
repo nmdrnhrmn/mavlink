@@ -237,11 +237,11 @@ public class MavlinkConnection {
      */
     public MavlinkMessage next() throws IOException {
         readLock.lock();
-        long prevTime = System.currentTimeMillis();
+        System.out.println("NEXT_DEB_ call next()");
         try {
             MavlinkPacket packet = reader.next();
             if (packet == null) {
-                System.out.println("PACKET_NULL");
+                System.out.println("NEXT_DEB_ Packet is null");
             }
             while (packet != null) {
                 MavlinkDialect dialect = systemDialects.getOrDefault(packet.getSystemId(), defaultDialect);
@@ -256,13 +256,15 @@ public class MavlinkConnection {
                     }
                     if (packet.isMavlink2()) {
                         //noinspection unchecked
+                        System.out.println("NEXT_DEB_ Mavlink2 packet");
                         return new Mavlink2Message(packet, payload);
                     } else {
                         //noinspection unchecked
+                        System.out.println("NEXT_DEB_ Mavlink1 packet");
                         return new MavlinkMessage(packet, payload);
                     }
                 } else {
-                    System.out.println("DROP: " + System.currentTimeMillis());
+                    System.out.println("NEXT_DEB_ DROP");
                     reader.drop();
                 }
                 packet = reader.next();
@@ -271,9 +273,7 @@ public class MavlinkConnection {
             throw new EOFException("End of stream");
         } finally {
             readLock.unlock();
-            long currentTime = System.currentTimeMillis();
-            long deltaTime = currentTime - prevTime;
-            System.out.println("DELTA_TIME: " + deltaTime + " (" + prevTime + ")");
+            System.out.println("NEXT_DEB_ finally");
         }
     }
 

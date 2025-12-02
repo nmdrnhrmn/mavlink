@@ -237,17 +237,14 @@ public class MavlinkConnection {
      */
     public MavlinkMessage next() throws IOException {
         readLock.lock();
+        long prevTime = System.currentTimeMillis();
         try {
             MavlinkPacket packet;
             while ((packet = reader.next()) != null) {
                 MavlinkDialect dialect = systemDialects.getOrDefault(packet.getSystemId(), defaultDialect);
                 Class<?> messageType = getMessageType(packet, dialect);
                 if (messageType != null) {
-                    long prevTime = System.currentTimeMillis();
                     Object payload = deserializer.deserialize(packet.getPayload(), messageType);
-                    long currentTime = System.currentTimeMillis();
-                    long deltaTime = currentTime - prevTime;
-                    System.out.println("DELTA_TIME: " + deltaTime);
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {
@@ -269,6 +266,9 @@ public class MavlinkConnection {
             throw new EOFException("End of stream");
         } finally {
             readLock.unlock();
+            long currentTime = System.currentTimeMillis();
+            long deltaTime = currentTime - prevTime;
+            System.out.println("DELTA_TIME: " + deltaTime);
         }
     }
 

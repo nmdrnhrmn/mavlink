@@ -270,6 +270,7 @@ public class MavlinkConnection {
                 packet = reader.next();
             }
 
+            System.out.println("NEXT_DEB_ EOF");
             throw new EOFException("End of stream");
         } finally {
             readLock.unlock();

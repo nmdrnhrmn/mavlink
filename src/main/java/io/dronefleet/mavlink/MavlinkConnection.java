@@ -246,15 +246,19 @@ public class MavlinkConnection {
             while (packet != null) {
                 MavlinkDialect dialect = systemDialects.getOrDefault(packet.getSystemId(), defaultDialect);
                 Class<?> messageType = getMessageType(packet, dialect);
-                System.out.println("NEXT_DEB_ messageType: " + messageType);
+                if (messageType != null) {
+                    System.out.println("NEXT_DEB_ messageType: " + messageType.getSimpleName());
+                }
                 if (messageType != null) {
                     Object payload = deserializer.deserialize(packet.getPayload(), messageType);
+                    System.out.println("NEXT_DEB_ payload: " + payload.getClass().getSimpleName());
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {
                             systemDialects.put(packet.getSystemId(), dialects.get(heartbeat.autopilot().entry()));
                         }
                     }
+                    System.out.println("NEXT_DEB_ isPacket2: " + packet.isMavlink2());
                     if (packet.isMavlink2()) {
                         //noinspection unchecked
                         System.out.println("NEXT_DEB_ Mavlink2 packet");

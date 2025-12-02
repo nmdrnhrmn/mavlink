@@ -3,6 +3,7 @@ package io.dronefleet.mavlink.serialization.payload.reflection;
 import io.dronefleet.mavlink.annotations.MavlinkFieldInfo;
 import io.dronefleet.mavlink.annotations.MavlinkMessageBuilder;
 import io.dronefleet.mavlink.annotations.MavlinkMessageInfo;
+import io.dronefleet.mavlink.minimal.Heartbeat;
 import io.dronefleet.mavlink.serialization.MavlinkSerializationException;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
 import io.dronefleet.mavlink.util.EnumValue;
@@ -21,66 +22,68 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer {
 
     private static final WireFieldInfoComparator wireComparator = new WireFieldInfoComparator();
+    private static final Heartbeat dummy = new Heartbeat.Builder().build();
 
     @Override
     public <T> T deserialize(byte[] payload, Class<T> messageType) {
-        MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);
-        if (message == null) {
-            throw new IllegalArgumentException(String.format(
-                    "class %s is not annotated with @MavlinkMessageInfo", messageType.getName()));
-        }
-
-        try {
-            Object builder = Arrays.stream(messageType.getMethods())
-                    .filter(m -> m.isAnnotationPresent(MavlinkMessageBuilder.class))
-                    .findFirst()
-                    .orElseThrow(() -> new MavlinkSerializationException(
-                            "Message " + messageType.getName() + " does not have a builder"))
-                    .invoke(null);
-
-            AtomicInteger nextOffset = new AtomicInteger();
-            Arrays.stream(builder.getClass().getMethods())
-                    .filter(m -> m.isAnnotationPresent(MavlinkFieldInfo.class))
-                    .sorted((a, b) -> {
-                        MavlinkFieldInfo fa = a.getAnnotation(MavlinkFieldInfo.class);
-                        MavlinkFieldInfo fb = b.getAnnotation(MavlinkFieldInfo.class);
-                        return wireComparator.compare(fa, fb);
-                    })
-                    .forEach(method -> {
-                        MavlinkFieldInfo field = method.getAnnotation(MavlinkFieldInfo.class);
-
-                        int length = field.unitSize() * Math.max(field.arraySize(), 1);
-                        int offset = nextOffset.getAndAccumulate(length, (a, b) -> a + b);
-
-                        byte[] data = new byte[length];
-                        if (offset < payload.length) {
-                            int copyLength = Math.max(
-                                    Math.min(length, payload.length - offset),
-                                    0
-                            );
-                            System.arraycopy(payload, offset, data, 0, copyLength);
-                        }
-
-                        Type fieldType = Optional.of(method.getGenericParameterTypes())
-                                .filter(types -> types.length == 1)
-                                .map(types -> types[0])
-                                .orElseThrow(() -> new MavlinkSerializationException(
-                                        "Method " + method.getName() + " of " + builder.getClass().getName()
-                                                + " is annotated with @MavlinkFieldInfo, however does not " +
-                                                "accept a single parameter."));
-                        try {
-                            method.invoke(builder, deserialize(fieldType, data, 0, data.length, field));
-                        } catch (IllegalAccessException | InvocationTargetException e) {
-                            e.printStackTrace();
-                        }
-                    });
-
-            //noinspection unchecked
-            return (T) builder.getClass().getMethod("build").invoke(builder);
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            e.printStackTrace();
-        }
-        return null;
+        return (T) dummy;
+//        MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);
+//        if (message == null) {
+//            throw new IllegalArgumentException(String.format(
+//                    "class %s is not annotated with @MavlinkMessageInfo", messageType.getName()));
+//        }
+//
+//        try {
+//            Object builder = Arrays.stream(messageType.getMethods())
+//                    .filter(m -> m.isAnnotationPresent(MavlinkMessageBuilder.class))
+//                    .findFirst()
+//                    .orElseThrow(() -> new MavlinkSerializationException(
+//                            "Message " + messageType.getName() + " does not have a builder"))
+//                    .invoke(null);
+//
+//            AtomicInteger nextOffset = new AtomicInteger();
+//            Arrays.stream(builder.getClass().getMethods())
+//                    .filter(m -> m.isAnnotationPresent(MavlinkFieldInfo.class))
+//                    .sorted((a, b) -> {
+//                        MavlinkFieldInfo fa = a.getAnnotation(MavlinkFieldInfo.class);
+//                        MavlinkFieldInfo fb = b.getAnnotation(MavlinkFieldInfo.class);
+//                        return wireComparator.compare(fa, fb);
+//                    })
+//                    .forEach(method -> {
+//                        MavlinkFieldInfo field = method.getAnnotation(MavlinkFieldInfo.class);
+//
+//                        int length = field.unitSize() * Math.max(field.arraySize(), 1);
+//                        int offset = nextOffset.getAndAccumulate(length, (a, b) -> a + b);
+//
+//                        byte[] data = new byte[length];
+//                        if (offset < payload.length) {
+//                            int copyLength = Math.max(
+//                                    Math.min(length, payload.length - offset),
+//                                    0
+//                            );
+//                            System.arraycopy(payload, offset, data, 0, copyLength);
+//                        }
+//
+//                        Type fieldType = Optional.of(method.getGenericParameterTypes())
+//                                .filter(types -> types.length == 1)
+//                                .map(types -> types[0])
+//                                .orElseThrow(() -> new MavlinkSerializationException(
+//                                        "Method " + method.getName() + " of " + builder.getClass().getName()
+//                                                + " is annotated with @MavlinkFieldInfo, however does not " +
+//                                                "accept a single parameter."));
+//                        try {
+//                            method.invoke(builder, deserialize(fieldType, data, 0, data.length, field));
+//                        } catch (IllegalAccessException | InvocationTargetException e) {
+//                            e.printStackTrace();
+//                        }
+//                    });
+//
+//            //noinspection unchecked
+//            return (T) builder.getClass().getMethod("build").invoke(builder);
+//        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+//            e.printStackTrace();
+//        }
+//        return null;
     }
 
     private Object deserialize(Type fieldType, byte[] data, int offset, int length, MavlinkFieldInfo field) {

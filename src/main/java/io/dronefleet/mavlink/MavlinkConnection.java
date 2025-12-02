@@ -262,6 +262,7 @@ public class MavlinkConnection {
                         return new MavlinkMessage(packet, payload);
                     }
                 } else {
+                    System.out.println("DROP: " + System.currentTimeMillis());
                     reader.drop();
                 }
                 packet = reader.next();

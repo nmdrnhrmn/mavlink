@@ -254,13 +254,13 @@ public class MavlinkConnection {
                 if (messageType != null) {
                     long t3 = System.currentTimeMillis();
                     Object payload = deserializer.deserialize(packet.getPayload(), messageType);
+                    MavlinkConnection.t3 += System.currentTimeMillis() - t3;
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {
                             systemDialects.put(packet.getSystemId(), dialects.get(heartbeat.autopilot().entry()));
                         }
                     }
-                    MavlinkConnection.t3 += System.currentTimeMillis() - t3;
                     if (packet.isMavlink2()) {
                         //noinspection unchecked
                         return new Mavlink2Message(packet, payload);

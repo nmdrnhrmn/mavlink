@@ -235,37 +235,37 @@ public class MavlinkConnection {
      * @throws EOFException When the stream ends.
      * @throws IOException  If there has been an error reading from the stream.
      */
+
+    private static long t1 = 0L;
+    private static long t2 = 0L;
+    private static long t3 = 0L;
+    private static long t4 = 0L;
     public MavlinkMessage next() throws IOException {
         readLock.lock();
-        System.out.println("NEXT_DEB_ call next()");
         try {
+            long t1 = System.currentTimeMillis();
             MavlinkPacket packet = reader.next();
-            if (packet == null) {
-                System.out.println("NEXT_DEB_ Packet is null");
-            }
+            MavlinkConnection.t1 += System.currentTimeMillis() - t1;
             while (packet != null) {
+                long t2 = System.currentTimeMillis();
                 MavlinkDialect dialect = systemDialects.getOrDefault(packet.getSystemId(), defaultDialect);
                 Class<?> messageType = getMessageType(packet, dialect);
+                MavlinkConnection.t2 += System.currentTimeMillis() - t2;
                 if (messageType != null) {
-                    System.out.println("NEXT_DEB_ messageType: " + messageType.getSimpleName());
-                }
-                if (messageType != null) {
+                    long t3 = System.currentTimeMillis();
                     Object payload = deserializer.deserialize(packet.getPayload(), messageType);
-                    System.out.println("NEXT_DEB_ payload: " + payload.getClass().getSimpleName());
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {
                             systemDialects.put(packet.getSystemId(), dialects.get(heartbeat.autopilot().entry()));
                         }
                     }
-                    System.out.println("NEXT_DEB_ isPacket2: " + packet.isMavlink2());
+                    MavlinkConnection.t3 += System.currentTimeMillis() - t3;
                     if (packet.isMavlink2()) {
                         //noinspection unchecked
-                        System.out.println("NEXT_DEB_ Mavlink2 packet");
                         return new Mavlink2Message(packet, payload);
                     } else {
                         //noinspection unchecked
-                        System.out.println("NEXT_DEB_ Mavlink1 packet");
                         return new MavlinkMessage(packet, payload);
                     }
                 } else {
@@ -275,11 +275,10 @@ public class MavlinkConnection {
                 packet = reader.next();
             }
 
-            System.out.println("NEXT_DEB_ EOF");
             throw new EOFException("End of stream");
         } finally {
             readLock.unlock();
-            System.out.println("NEXT_DEB_ finally");
+            System.out.println("time_deb t1: " + t1 + " t2: " + t2 + " t3: " + t3);
         }
     }
 

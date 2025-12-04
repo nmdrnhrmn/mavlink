@@ -250,14 +250,6 @@ public class MavlinkConnection {
                     byte[] payloadBytes = packet.getPayload();
                     int messageId = packet.getMessageId();
                     Object payload = deserializer.deserialize(messageId, payloadBytes, messageType, debugPrintFunction);
-                    if (isGimbalDeviceAttitudeStatusMessage(messageId)) {
-                        try {
-                            GimbalDeviceAttitudeStatus otherGimbalAttitude = gimbalDeviceAttitudeStatusDeserializer.deserialize(payloadBytes);
-                            String s = "";
-                        } catch (ClassCastException e) {
-                            return null;
-                        }
-                    }
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {

@@ -38,13 +38,13 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
                 return null;
             }
         }
-//        if (isGimbalDeviceAttitudeStatusMessage(messageId)) {
-//            try {
-//                return (T) gimbalDeviceAttitudeStatusDeserializer.deserialize(payload);
-//            } catch (ClassCastException e) {
-//                return null;
-//            }
-//        }
+        if (isGimbalDeviceAttitudeStatusMessage(messageId)) {
+            try {
+                return (T) gimbalDeviceAttitudeStatusDeserializer.deserialize(payload);
+            } catch (ClassCastException e) {
+                return null;
+            }
+        }
         MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);
         if (message == null) {
             throw new IllegalArgumentException(String.format(

@@ -5,6 +5,7 @@ import io.dronefleet.mavlink.annotations.MavlinkMessageBuilder;
 import io.dronefleet.mavlink.annotations.MavlinkMessageInfo;
 import io.dronefleet.mavlink.serialization.MavlinkSerializationException;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
+import io.dronefleet.mavlink.serialization.payload.MessageTimer;
 import io.dronefleet.mavlink.util.EnumValue;
 import io.dronefleet.mavlink.util.WireFieldInfoComparator;
 
@@ -17,64 +18,16 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer {
 
     private static final WireFieldInfoComparator wireComparator = new WireFieldInfoComparator();
-
-    private static final long MINUTE_IN_MILLIS = 6000;
-    private static long timeOfSnapshot = 0;
-
-    private static final Map<Integer, MessageIdExecutionStatisticsEntry> parsingStats = new HashMap<>();
-
-    private void dumpParsingStatsToConsole() {
-        if (parsingStats.isEmpty()) {
-            System.out.println("No parsing statistics available.");
-            return;
-        }
-
-        long totalMessages = parsingStats.values().stream()
-            .mapToInt(MessageIdExecutionStatisticsEntry::getReceivedTimes)
-            .sum();
-        long totalTime = parsingStats.values().stream()
-            .mapToLong(MessageIdExecutionStatisticsEntry::getCombinedParsingTime)
-            .sum();
-
-        System.out.println("\n╔═══════════════════════════════════════════════════════════════════════════════════════╗");
-        System.out.println("║                          MAVLink Parsing Statistics                                   ║");
-        System.out.println("╠════════════╦═══════════════╦═══════════════════╦═══════════════════════╦══════════════╣");
-        System.out.println("║ Message ID ║ Times Parsed  ║  Total Time (ms)  ║   Avg Time (ms)       ║   % of Time  ║");
-        System.out.println("╠════════════╬═══════════════╬═══════════════════╬═══════════════════════╬══════════════╣");
-
-        parsingStats.entrySet().stream()
-            .sorted((e1, e2) -> Long.compare(e2.getValue().getCombinedParsingTime(), e1.getValue().getCombinedParsingTime()))
-            .forEach(entry -> {
-                int messageId = entry.getKey();
-                MessageIdExecutionStatisticsEntry stats = entry.getValue();
-                long totalTimeForMsg = stats.getCombinedParsingTime();
-                int count = stats.getReceivedTimes();
-                double avgTime = (double) totalTimeForMsg / count;
-                double percentOfTotal = (double) totalTimeForMsg / totalTime * 100;
-
-                System.out.printf("║ %-10d ║ %-13d ║ %-17d ║ %-21.3f ║ %-12.1f ║%n", 
-                    messageId, count, totalTimeForMsg, avgTime, percentOfTotal);
-            });
-
-        double avgTimeOverall = (double) totalTime / totalMessages;
-        System.out.println("╠════════════╩═══════════════╩═══════════════════╩═══════════════════════╩══════════════╣");
-        System.out.printf("║ TOTAL: %d messages parsed in %d ms (avg: %.3f ms/msg)                            ║%n",
-            totalMessages, totalTime, avgTimeOverall);
-        System.out.println("╚═══════════════════════════════════════════════════════════════════════════════════════╝\n");
-    }
+    private final MessageTimer messageTimer = new MessageTimer();
 
     @Override
-    public <T> T deserialize(int messageId, byte[] payload, Class<T> messageType) {
-        long enteredMethodTime = System.currentTimeMillis();
-        if (enteredMethodTime - timeOfSnapshot >= MINUTE_IN_MILLIS) {
-            dumpParsingStatsToConsole();
-            timeOfSnapshot = enteredMethodTime;
-            parsingStats.clear();
-        }
+    public <T> T deserialize(int messageId, byte[] payload, Class<T> messageType, Consumer<String> debugPrintFunction) {
+        messageTimer.recordStartParsingTimeAndDumpResults(debugPrintFunction);
         MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);
         if (message == null) {
             throw new IllegalArgumentException(String.format(
@@ -131,15 +84,7 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             e.printStackTrace();
         } finally {
-            long methodExecutionTime = System.currentTimeMillis() - enteredMethodTime;
-            MessageIdExecutionStatisticsEntry stats;
-            MessageIdExecutionStatisticsEntry currentStats = parsingStats.get(messageId);
-            if (currentStats == null) {
-                stats = new MessageIdExecutionStatisticsEntry(methodExecutionTime);
-            } else {
-                stats = currentStats.produceNextAddingParsingTime(methodExecutionTime);
-            }
-            parsingStats.put(messageId, stats);
+            messageTimer.endTiming(messageId);
         }
         return null;
     }
@@ -246,35 +191,5 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
             result.add(value);
         }
         return Collections.unmodifiableList(result);
-    }
-}
-
-class MessageIdExecutionStatisticsEntry {
-    private final int receivedTimes;
-    private final long combinedParsingTime;
-
-    public MessageIdExecutionStatisticsEntry(int receivedTimes, long combinedParsingTime) {
-        this.receivedTimes = receivedTimes;
-        this.combinedParsingTime = combinedParsingTime;
-    }
-
-    public MessageIdExecutionStatisticsEntry(long timeOfFirstParsing) {
-        this.receivedTimes = 1;
-        this.combinedParsingTime = timeOfFirstParsing;
-    }
-
-    public MessageIdExecutionStatisticsEntry produceNextAddingParsingTime(long parsingTime) {
-        return new MessageIdExecutionStatisticsEntry(
-            receivedTimes + 1,
-            combinedParsingTime + parsingTime
-        );
-    }
-
-    public int getReceivedTimes() {
-        return receivedTimes;
-    }
-
-    public long getCombinedParsingTime() {
-        return combinedParsingTime;
     }
 }

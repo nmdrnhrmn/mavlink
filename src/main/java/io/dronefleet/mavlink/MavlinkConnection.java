@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 /**
  * <p>Represents a Mavlink connection. This class is responsible for mid-to-low-level function of Mavlink communication.
@@ -181,7 +182,7 @@ public class MavlinkConnection {
     private final MavlinkPayloadSerializer serializer;
 
     /**
-     * Locks calls to {@link #next()} to ensure no concurrent reads occur.
+     * Locks calls to {@link #next(Consumer)} to ensure no concurrent reads occur.
      */
     private final Lock readLock;
 
@@ -230,7 +231,7 @@ public class MavlinkConnection {
      * @throws IOException  If there has been an error reading from the stream.
      */
 
-    public MavlinkMessage next() throws IOException {
+    public MavlinkMessage next(Consumer<String> debugPrintFunction) throws IOException {
         readLock.lock();
         try {
             MavlinkPacket packet = reader.next();
@@ -240,7 +241,7 @@ public class MavlinkConnection {
                 if (messageType != null) {
                     byte[] payloadBytes = packet.getPayload();
                     int messageId = packet.getMessageId();
-                    Object payload = deserializer.deserialize(messageId, payloadBytes, messageType);
+                    Object payload = deserializer.deserialize(messageId, payloadBytes, messageType, debugPrintFunction);
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {

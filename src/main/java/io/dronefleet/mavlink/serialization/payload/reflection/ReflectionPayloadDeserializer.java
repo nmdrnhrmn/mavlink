@@ -24,10 +24,26 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
 
     private static final WireFieldInfoComparator wireComparator = new WireFieldInfoComparator();
     private final MessageTimer messageTimer = new MessageTimer();
+    private final HeartbeatDeserializer heartbeatDeserializer = new HeartbeatDeserializer();
+    private final GimbalDeviceAttitudeStatusDeserializer gimbalDeviceAttitudeStatusDeserializer = new GimbalDeviceAttitudeStatusDeserializer();
 
     @Override
     public <T> T deserialize(int messageId, byte[] payload, Class<T> messageType, Consumer<String> debugPrintFunction) {
         messageTimer.recordStartParsingTimeAndDumpResults(debugPrintFunction);
+        if (isHeartbeatMessage(messageId)) {
+            try {
+                return (T) heartbeatDeserializer.deserialize(payload);
+            } catch (ClassCastException e) {
+                return null;
+            }
+        }
+        if (isGimbalDeviceAttitudeStatusMessage(messageId)) {
+            try {
+                return (T) gimbalDeviceAttitudeStatusDeserializer.deserialize(payload);
+            } catch (ClassCastException e) {
+                return null;
+            }
+        }
         MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);
         if (message == null) {
             throw new IllegalArgumentException(String.format(
@@ -87,6 +103,14 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
             messageTimer.endTiming(messageId);
         }
         return null;
+    }
+
+    private boolean isHeartbeatMessage(int messageId) {
+        return messageId == HEARTBEAT_MESSAGE_ID;
+    }
+
+    private boolean isGimbalDeviceAttitudeStatusMessage(int messageId) {
+        return messageId == GIMBAL_ATTITUDE_MESSAGE_ID;
     }
 
     private Object deserialize(Type fieldType, byte[] data, int offset, int length, MavlinkFieldInfo field) {
@@ -192,4 +216,7 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
         }
         return Collections.unmodifiableList(result);
     }
+
+    private static final int HEARTBEAT_MESSAGE_ID = 0;
+    private static final int GIMBAL_ATTITUDE_MESSAGE_ID = 285;
 }

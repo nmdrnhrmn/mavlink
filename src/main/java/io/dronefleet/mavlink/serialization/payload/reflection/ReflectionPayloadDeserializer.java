@@ -62,7 +62,7 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
 
         double avgTimeOverall = (double) totalTime / totalMessages;
         System.out.println("╠════════════╩═══════════════╩═══════════════════╩═══════════════════════╩══════════════╣");
-        System.out.printf("║ TOTAL: %d messages parsed in %d ms (avg: %.3f ms/msg)                        ║%n", 
+        System.out.printf("║ TOTAL: %d messages parsed in %d ms (avg: %.3f ms/msg)                            ║%n",
             totalMessages, totalTime, avgTimeOverall);
         System.out.println("╚═══════════════════════════════════════════════════════════════════════════════════════╝\n");
     }
@@ -71,8 +71,8 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
     public <T> T deserialize(int messageId, byte[] payload, Class<T> messageType) {
         long enteredMethodTime = System.currentTimeMillis();
         if (enteredMethodTime - timeOfSnapshot >= MINUTE_IN_MILLIS) {
-            timeOfSnapshot = enteredMethodTime;
             dumpParsingStatsToConsole();
+            timeOfSnapshot = enteredMethodTime;
             parsingStats.clear();
         }
         MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);

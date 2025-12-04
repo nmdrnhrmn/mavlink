@@ -234,11 +234,7 @@ public class MavlinkConnection {
      * @throws IOException  If there has been an error reading from the stream.
      */
 
-    private final HeartbeatDeserializer heartbeatDeserializer = new HeartbeatDeserializer();
     private final GimbalDeviceAttitudeStatusDeserializer gimbalDeviceAttitudeStatusDeserializer = new GimbalDeviceAttitudeStatusDeserializer();
-    private boolean isHeartbeatMessage(int messageId) {
-        return messageId == HEARTBEAT_MESSAGE_ID;
-    }
 
     private boolean isGimbalDeviceAttitudeStatusMessage(int messageId) {
         return messageId == GIMBAL_ATTITUDE_MESSAGE_ID;
@@ -254,14 +250,6 @@ public class MavlinkConnection {
                     byte[] payloadBytes = packet.getPayload();
                     int messageId = packet.getMessageId();
                     Object payload = deserializer.deserialize(messageId, payloadBytes, messageType, debugPrintFunction);
-                    if (isHeartbeatMessage(messageId)) {
-                        try {
-                            Heartbeat otherHeartbeat = heartbeatDeserializer.deserialize(payloadBytes);
-                            String s = "";
-                        } catch (ClassCastException e) {
-                            return null;
-                        }
-                    }
                     if (isGimbalDeviceAttitudeStatusMessage(messageId)) {
                         try {
                             GimbalDeviceAttitudeStatus otherGimbalAttitude = gimbalDeviceAttitudeStatusDeserializer.deserialize(payloadBytes);
@@ -439,6 +427,5 @@ public class MavlinkConnection {
         return null;
     }
 
-    private static final int HEARTBEAT_MESSAGE_ID = 0;
     private static final int GIMBAL_ATTITUDE_MESSAGE_ID = 285;
 }

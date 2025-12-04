@@ -1,5 +1,7 @@
 package io.dronefleet.mavlink.serialization.payload.reflection;
 
+import com.sun.xml.internal.ws.api.message.Message;
+
 import io.dronefleet.mavlink.annotations.MavlinkFieldInfo;
 import io.dronefleet.mavlink.annotations.MavlinkMessageBuilder;
 import io.dronefleet.mavlink.annotations.MavlinkMessageInfo;
@@ -23,63 +25,123 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
 
     private static final WireFieldInfoComparator wireComparator = new WireFieldInfoComparator();
 
+    private static final long MINUTE_IN_MILLIS = 60000;
+    private static long time = MINUTE_IN_MILLIS;
+
+    private static final Map<Integer, MessageIdExecutionStatisticsEntry> parsingStats = new HashMap<>();
+
+    private void dumpParsingStatsToConsole() {
+        if (parsingStats.isEmpty()) {
+            System.out.println("No parsing statistics available.");
+            return;
+        }
+
+        System.out.println("\n╔════════════════════════════════════════════════════════════════════════╗");
+        System.out.println("║                    MAVLink Parsing Statistics                          ║");
+        System.out.println("╠════════════╦═══════════════╦═══════════════════╦═══════════════════════╣");
+        System.out.println("║ Message ID ║ Times Parsed  ║  Total Time (ms)  ║   Avg Time (ms)       ║");
+        System.out.println("╠════════════╬═══════════════╬═══════════════════╬═══════════════════════╣");
+
+        parsingStats.entrySet().stream()
+            .sorted((e1, e2) -> Long.compare(e2.getValue().getCombinedParsingTime(), e1.getValue().getCombinedParsingTime()))
+            .forEach(entry -> {
+                int messageId = entry.getKey();
+                MessageIdExecutionStatisticsEntry stats = entry.getValue();
+                long totalTime = stats.getCombinedParsingTime();
+                int count = stats.getReceivedTimes();
+                double avgTime = (double) totalTime / count;
+
+                System.out.printf("║ %-10d ║ %-13d ║ %-17d ║ %-21.3f ║%n", 
+                    messageId, count, totalTime, avgTime);
+            });
+
+        long totalMessages = parsingStats.values().stream()
+            .mapToInt(MessageIdExecutionStatisticsEntry::getReceivedTimes)
+            .sum();
+        long totalTime = parsingStats.values().stream()
+            .mapToLong(MessageIdExecutionStatisticsEntry::getCombinedParsingTime)
+            .sum();
+
+        System.out.println("╠════════════╩═══════════════╩═══════════════════╩═══════════════════════╣");
+        System.out.printf("║ TOTAL: %d messages parsed in %d ms (avg: %.3f ms/msg)%n", 
+            totalMessages, totalTime, (double) totalTime / totalMessages);
+        System.out.println("╚════════════════════════════════════════════════════════════════════════╝\n");
+    }
+
     @Override
-    public <T> T deserialize(byte[] payload, Class<T> messageType) {
+    public <T> T deserialize(int messageId, byte[] payload, Class<T> messageType) {
+        if (time <= 0) {
+            time = MINUTE_IN_MILLIS;
+            dumpParsingStatsToConsole();
+        }
+        long startTime = System.currentTimeMillis();
         MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);
         if (message == null) {
             throw new IllegalArgumentException(String.format(
-                    "class %s is not annotated with @MavlinkMessageInfo", messageType.getName()));
+                "class %s is not annotated with @MavlinkMessageInfo", messageType.getName()));
         }
 
         try {
             Object builder = Arrays.stream(messageType.getMethods())
-                    .filter(m -> m.isAnnotationPresent(MavlinkMessageBuilder.class))
-                    .findFirst()
-                    .orElseThrow(() -> new MavlinkSerializationException(
-                            "Message " + messageType.getName() + " does not have a builder"))
-                    .invoke(null);
+                .filter(m -> m.isAnnotationPresent(MavlinkMessageBuilder.class))
+                .findFirst()
+                .orElseThrow(() -> new MavlinkSerializationException(
+                    "Message " + messageType.getName() + " does not have a builder"))
+                .invoke(null);
 
             AtomicInteger nextOffset = new AtomicInteger();
             Arrays.stream(builder.getClass().getMethods())
-                    .filter(m -> m.isAnnotationPresent(MavlinkFieldInfo.class))
-                    .sorted((a, b) -> {
-                        MavlinkFieldInfo fa = a.getAnnotation(MavlinkFieldInfo.class);
-                        MavlinkFieldInfo fb = b.getAnnotation(MavlinkFieldInfo.class);
-                        return wireComparator.compare(fa, fb);
-                    })
-                    .forEach(method -> {
-                        MavlinkFieldInfo field = method.getAnnotation(MavlinkFieldInfo.class);
+                .filter(m -> m.isAnnotationPresent(MavlinkFieldInfo.class))
+                .sorted((a, b) -> {
+                    MavlinkFieldInfo fa = a.getAnnotation(MavlinkFieldInfo.class);
+                    MavlinkFieldInfo fb = b.getAnnotation(MavlinkFieldInfo.class);
+                    return wireComparator.compare(fa, fb);
+                })
+                .forEach(method -> {
+                    MavlinkFieldInfo field = method.getAnnotation(MavlinkFieldInfo.class);
 
-                        int length = field.unitSize() * Math.max(field.arraySize(), 1);
-                        int offset = nextOffset.getAndAccumulate(length, (a, b) -> a + b);
+                    int length = field.unitSize() * Math.max(field.arraySize(), 1);
+                    int offset = nextOffset.getAndAccumulate(length, (a, b) -> a + b);
 
-                        byte[] data = new byte[length];
-                        if (offset < payload.length) {
-                            int copyLength = Math.max(
-                                    Math.min(length, payload.length - offset),
-                                    0
-                            );
-                            System.arraycopy(payload, offset, data, 0, copyLength);
-                        }
+                    byte[] data = new byte[length];
+                    if (offset < payload.length) {
+                        int copyLength = Math.max(
+                            Math.min(length, payload.length - offset),
+                            0
+                        );
+                        System.arraycopy(payload, offset, data, 0, copyLength);
+                    }
 
-                        Type fieldType = Optional.of(method.getGenericParameterTypes())
-                                .filter(types -> types.length == 1)
-                                .map(types -> types[0])
-                                .orElseThrow(() -> new MavlinkSerializationException(
-                                        "Method " + method.getName() + " of " + builder.getClass().getName()
-                                                + " is annotated with @MavlinkFieldInfo, however does not " +
-                                                "accept a single parameter."));
-                        try {
-                            method.invoke(builder, deserialize(fieldType, data, 0, data.length, field));
-                        } catch (IllegalAccessException | InvocationTargetException e) {
-                            e.printStackTrace();
-                        }
-                    });
+                    Type fieldType = Optional.of(method.getGenericParameterTypes())
+                        .filter(types -> types.length == 1)
+                        .map(types -> types[0])
+                        .orElseThrow(() -> new MavlinkSerializationException(
+                            "Method " + method.getName() + " of " + builder.getClass().getName()
+                                + " is annotated with @MavlinkFieldInfo, however does not " +
+                                "accept a single parameter."));
+                    try {
+                        method.invoke(builder, deserialize(fieldType, data, 0, data.length, field));
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        e.printStackTrace();
+                    }
+                });
 
             //noinspection unchecked
             return (T) builder.getClass().getMethod("build").invoke(builder);
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             e.printStackTrace();
+        } finally {
+            long endTime = System.currentTimeMillis();
+            long deltaTime = endTime - startTime;
+            MessageIdExecutionStatisticsEntry stats;
+            MessageIdExecutionStatisticsEntry currentStats = parsingStats.get(messageId);
+            if (currentStats == null) {
+                stats = new MessageIdExecutionStatisticsEntry(deltaTime);
+            } else {
+                stats = currentStats.produceNextAddingParsingTime(deltaTime);
+            }
+            parsingStats.put(messageId, stats);
+            time -= deltaTime;
         }
         return null;
     }
@@ -141,14 +203,14 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
 
     private double doubleValue(byte[] data, int offset) {
         return ByteBuffer.wrap(data)
-                .order(ByteOrder.LITTLE_ENDIAN)
-                .getDouble(offset);
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .getDouble(offset);
     }
 
     private float floatValue(byte[] data, int offset) {
         return ByteBuffer.wrap(data)
-                .order(ByteOrder.LITTLE_ENDIAN)
-                .getFloat(offset);
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .getFloat(offset);
     }
 
     private String stringValue(byte[] data) {
@@ -174,8 +236,8 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
 
     private Object enumValue(Class<?> enumType, byte[] data, int offset, int length, boolean signed) {
         return EnumValue.create(
-                (Class<? extends Enum>) enumType,
-                (int) integerValue(data, offset, length, signed));
+            (Class<? extends Enum>) enumType,
+            (int) integerValue(data, offset, length, signed));
     }
 
     private List<?> listValue(Class<?> listType, byte[] data, MavlinkFieldInfo field) {
@@ -186,5 +248,35 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
             result.add(value);
         }
         return Collections.unmodifiableList(result);
+    }
+}
+
+class MessageIdExecutionStatisticsEntry {
+    private final int receivedTimes;
+    private final long combinedParsingTime;
+
+    public MessageIdExecutionStatisticsEntry(int receivedTimes, long combinedParsingTime) {
+        this.receivedTimes = receivedTimes;
+        this.combinedParsingTime = combinedParsingTime;
+    }
+
+    public MessageIdExecutionStatisticsEntry(long timeOfFirstParsing) {
+        this.receivedTimes = 1;
+        this.combinedParsingTime = timeOfFirstParsing;
+    }
+
+    public MessageIdExecutionStatisticsEntry produceNextAddingParsingTime(long parsingTime) {
+        return new MessageIdExecutionStatisticsEntry(
+            receivedTimes + 1,
+            combinedParsingTime + parsingTime
+        );
+    }
+
+    public int getReceivedTimes() {
+        return receivedTimes;
+    }
+
+    public long getCombinedParsingTime() {
+        return combinedParsingTime;
     }
 }

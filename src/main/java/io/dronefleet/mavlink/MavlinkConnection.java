@@ -239,8 +239,8 @@ public class MavlinkConnection {
                 Class<?> messageType = getMessageType(packet, dialect);
                 if (messageType != null) {
                     byte[] payloadBytes = packet.getPayload();
-                    System.out.println("payload_bytes: " + Arrays.toString(payloadBytes));
-                    Object payload = deserializer.deserialize(payloadBytes, messageType);
+                    int messageId = packet.getMessageId();
+                    Object payload = deserializer.deserialize(messageId, payloadBytes, messageType);
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {

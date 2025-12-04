@@ -22,7 +22,7 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
 
     private static final WireFieldInfoComparator wireComparator = new WireFieldInfoComparator();
 
-    private static final long MINUTE_IN_MILLIS = 6000;
+    private static final long MINUTE_IN_MILLIS = 60000;
     private static long time = MINUTE_IN_MILLIS;
 
     private static final Map<Integer, MessageIdExecutionStatisticsEntry> parsingStats = new HashMap<>();
@@ -72,6 +72,7 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
         if (time <= 0) {
             time = MINUTE_IN_MILLIS;
             dumpParsingStatsToConsole();
+            parsingStats.clear();
         }
         long startTime = System.currentTimeMillis();
         MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);

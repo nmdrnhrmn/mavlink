@@ -32,6 +32,7 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
         messageTimer.recordStartParsingTimeAndDumpResults(debugPrintFunction);
         if (isHeartbeatMessage(messageId)) {
             try {
+                messageTimer.endTiming(messageId);
                 return (T) heartbeatDeserializer.deserialize(payload);
             } catch (ClassCastException e) {
                 return null;

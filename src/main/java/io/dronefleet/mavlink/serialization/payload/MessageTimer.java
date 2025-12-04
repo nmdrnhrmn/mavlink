@@ -66,10 +66,11 @@ public class MessageTimer {
                     messageId, count, totalTimeForMsg, avgTime, percentOfTotal));
             });
 
+        long percentOfTotal = totalTime * 100 / DUMP_INTERVAL_MS;
         double avgTimeOverall = (double) totalTime / totalMessages;
         sb.append("╠════════════╩═══════════════╩═══════════════════╩═══════════════════════╩══════════════╣\n");
-        sb.append(String.format("║ TOTAL: %d messages parsed in %d ms (avg: %.3f ms/msg)                             ║%n",
-            totalMessages, totalTime, avgTimeOverall));
+        sb.append(String.format("║ TOTAL: %d messages parsed in %d ms - %d%% of total time.     ║%n",
+            totalMessages, totalTime, percentOfTotal, avgTimeOverall));
         sb.append("╚═══════════════════════════════════════════════════════════════════════════════════════╝\n");
 
         printFunction.accept(sb.toString());

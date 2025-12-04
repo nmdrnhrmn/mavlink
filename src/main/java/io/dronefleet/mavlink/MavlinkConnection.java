@@ -1,22 +1,16 @@
 package io.dronefleet.mavlink;
 
 import io.dronefleet.mavlink.annotations.MavlinkMessageInfo;
-import io.dronefleet.mavlink.ardupilotmega.ArdupilotmegaDialect;
-import io.dronefleet.mavlink.asluav.AsluavDialect;
-import io.dronefleet.mavlink.autoquad.AutoquadDialect;
 import io.dronefleet.mavlink.common.CommonDialect;
 import io.dronefleet.mavlink.minimal.MavAutopilot;
 import io.dronefleet.mavlink.minimal.Heartbeat;
 import io.dronefleet.mavlink.minimal.MinimalDialect;
-import io.dronefleet.mavlink.paparazzi.PaparazziDialect;
 import io.dronefleet.mavlink.protocol.MavlinkPacket;
 import io.dronefleet.mavlink.protocol.MavlinkPacketReader;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadSerializer;
 import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadDeserializer;
 import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadSerializer;
-import io.dronefleet.mavlink.slugs.SlugsDialect;
-import sun.rmi.runtime.Log;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -101,12 +95,12 @@ public class MavlinkConnection {
          */
         public MavlinkConnection build() {
             return new MavlinkConnection(
-                    new MavlinkPacketReader(in),
-                    out,
-                    dialects,
-                    defaultDialect,
-                    new ReflectionPayloadDeserializer(),
-                    new ReflectionPayloadSerializer()
+                new MavlinkPacketReader(in),
+                out,
+                dialects,
+                defaultDialect,
+                new ReflectionPayloadDeserializer(),
+                new ReflectionPayloadSerializer()
             );
         }
     }
@@ -197,12 +191,12 @@ public class MavlinkConnection {
     private final Lock writeLock;
 
     MavlinkConnection(
-            MavlinkPacketReader reader,
-            OutputStream out,
-            Map<MavAutopilot, MavlinkDialect> dialects,
-            MavlinkDialect defaultDialect,
-            MavlinkPayloadDeserializer deserializer,
-            MavlinkPayloadSerializer serializer) {
+        MavlinkPacketReader reader,
+        OutputStream out,
+        Map<MavAutopilot, MavlinkDialect> dialects,
+        MavlinkDialect defaultDialect,
+        MavlinkPayloadDeserializer deserializer,
+        MavlinkPayloadSerializer serializer) {
         this.reader = reader;
         this.out = out;
         this.dialects = dialects;
@@ -236,25 +230,17 @@ public class MavlinkConnection {
      * @throws IOException  If there has been an error reading from the stream.
      */
 
-    private static long t1 = 0L;
-    private static long t2 = 0L;
-    private static long t3 = 0L;
-    private static long t4 = 0L;
     public MavlinkMessage next() throws IOException {
         readLock.lock();
         try {
-            long t1 = System.currentTimeMillis();
             MavlinkPacket packet = reader.next();
-            MavlinkConnection.t1 += System.currentTimeMillis() - t1;
             while (packet != null) {
-                long t2 = System.currentTimeMillis();
                 MavlinkDialect dialect = systemDialects.getOrDefault(packet.getSystemId(), defaultDialect);
                 Class<?> messageType = getMessageType(packet, dialect);
-                MavlinkConnection.t2 += System.currentTimeMillis() - t2;
                 if (messageType != null) {
-                    long t3 = System.currentTimeMillis();
-                    Object payload = deserializer.deserialize(packet.getPayload(), messageType);
-                    MavlinkConnection.t3 += System.currentTimeMillis() - t3;
+                    byte[] payloadBytes = packet.getPayload();
+                    System.out.println("payload_bytes: " + Arrays.toString(payloadBytes));
+                    Object payload = deserializer.deserialize(payloadBytes, messageType);
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {
@@ -269,7 +255,6 @@ public class MavlinkConnection {
                         return new MavlinkMessage(packet, payload);
                     }
                 } else {
-                    System.out.println("NEXT_DEB_ DROP");
                     reader.drop();
                 }
                 packet = reader.next();
@@ -278,7 +263,6 @@ public class MavlinkConnection {
             throw new EOFException("End of stream");
         } finally {
             readLock.unlock();
-            System.out.println("time_deb t1: " + t1 + " t2: " + t2 + " t3: " + t3);
         }
     }
 
@@ -292,17 +276,17 @@ public class MavlinkConnection {
      */
     public void send1(int systemId, int componentId, Object payload) throws IOException {
         MavlinkMessageInfo messageInfo = payload.getClass()
-                .getAnnotation(MavlinkMessageInfo.class);
+            .getAnnotation(MavlinkMessageInfo.class);
         byte[] serializedPayload = serializer.serialize(payload);
         writeLock.lock();
         try {
             send(MavlinkPacket.createMavlink1Packet(
-                    sequence++,
-                    systemId,
-                    componentId,
-                    messageInfo.id(),
-                    messageInfo.crc(),
-                    serializedPayload));
+                sequence++,
+                systemId,
+                componentId,
+                messageInfo.id(),
+                messageInfo.crc(),
+                serializedPayload));
         } finally {
             writeLock.unlock();
         }
@@ -318,17 +302,17 @@ public class MavlinkConnection {
      */
     public void send2(int systemId, int componentId, Object payload) throws IOException {
         MavlinkMessageInfo messageInfo = payload.getClass()
-                .getAnnotation(MavlinkMessageInfo.class);
+            .getAnnotation(MavlinkMessageInfo.class);
         byte[] serializedPayload = serializer.serialize(payload);
         writeLock.lock();
         try {
             send(MavlinkPacket.createUnsignedMavlink2Packet(
-                    sequence++,
-                    systemId,
-                    componentId,
-                    messageInfo.id(),
-                    messageInfo.crc(),
-                    serializedPayload));
+                sequence++,
+                systemId,
+                componentId,
+                messageInfo.id(),
+                messageInfo.crc(),
+                serializedPayload));
         } finally {
             writeLock.unlock();
         }
@@ -348,20 +332,20 @@ public class MavlinkConnection {
     public void send2(int systemId, int componentId, Object payload, int linkId,
                       long timestamp, byte[] secretKey) throws IOException {
         MavlinkMessageInfo messageInfo = payload.getClass()
-                .getAnnotation(MavlinkMessageInfo.class);
+            .getAnnotation(MavlinkMessageInfo.class);
         byte[] serializedPayload = serializer.serialize(payload);
         writeLock.lock();
         try {
             send(MavlinkPacket.createSignedMavlink2Packet(
-                    sequence++,
-                    systemId,
-                    componentId,
-                    messageInfo.id(),
-                    messageInfo.crc(),
-                    serializedPayload,
-                    linkId,
-                    timestamp,
-                    secretKey));
+                sequence++,
+                systemId,
+                componentId,
+                messageInfo.id(),
+                messageInfo.crc(),
+                serializedPayload,
+                linkId,
+                timestamp,
+                secretKey));
         } finally {
             writeLock.unlock();
         }

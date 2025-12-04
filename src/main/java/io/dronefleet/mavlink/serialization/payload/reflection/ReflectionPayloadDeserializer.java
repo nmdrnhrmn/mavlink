@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer {
 
     private static final WireFieldInfoComparator wireComparator = new WireFieldInfoComparator();
-    private static final Heartbeat dummy = new Heartbeat.Builder().build();
 
     @Override
     public <T> T deserialize(byte[] payload, Class<T> messageType) {

@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 public class MessageTimer {
-    private static final long DUMP_INTERVAL_MS = 6000;
+    private static final long DUMP_INTERVAL_MS = 30000;
 
     private final Map<Integer, MessageIdExecutionStatisticsEntry> parsingStats = new HashMap<>();
     private long timeOfSnapshot = 0;

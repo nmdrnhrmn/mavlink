@@ -29,7 +29,7 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
 
     private void dumpParsingStatsToConsole() {
         if (parsingStats.isEmpty()) {
-            System.out.println("MavlinkParsingStats: No statistics available");
+            System.out.println("No parsing statistics available.");
             return;
         }
 
@@ -40,8 +40,12 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
             .mapToLong(MessageIdExecutionStatisticsEntry::getCombinedParsingTime)
             .sum();
 
-        System.out.println("MavlinkParsingStats: === Parsing Statistics (sorted by total time) ===");
-        
+        System.out.println("\n╔═══════════════════════════════════════════════════════════════════════════════════════╗");
+        System.out.println("║                          MAVLink Parsing Statistics                                   ║");
+        System.out.println("╠════════════╦═══════════════╦═══════════════════╦═══════════════════════╦══════════════╣");
+        System.out.println("║ Message ID ║ Times Parsed  ║  Total Time (ms)  ║   Avg Time (ms)       ║   % of Time  ║");
+        System.out.println("╠════════════╬═══════════════╬═══════════════════╬═══════════════════════╬══════════════╣");
+
         parsingStats.entrySet().stream()
             .sorted((e1, e2) -> Long.compare(e2.getValue().getCombinedParsingTime(), e1.getValue().getCombinedParsingTime()))
             .forEach(entry -> {
@@ -52,13 +56,15 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
                 double avgTime = (double) totalTimeForMsg / count;
                 double percentOfTotal = (double) totalTimeForMsg / totalTime * 100;
 
-                System.out.printf("  MavlinkParsingStats: MsgID[%d] count=%d, total=%dms, avg=%.3fms, %%time=%.1f%%%n", 
+                System.out.printf("║ %-10d ║ %-13d ║ %-17d ║ %-21.3f ║ %-12.1f ║%n", 
                     messageId, count, totalTimeForMsg, avgTime, percentOfTotal);
             });
 
         double avgTimeOverall = (double) totalTime / totalMessages;
-        System.out.printf("MavlinkParsingStats: TOTAL=%d messages, time=%dms, avg=%.3fms/msg%n", 
+        System.out.println("╠════════════╩═══════════════╩═══════════════════╩═══════════════════════╩══════════════╣");
+        System.out.printf("║ TOTAL: %d messages parsed in %d ms (avg: %.3f ms/msg)                        ║%n", 
             totalMessages, totalTime, avgTimeOverall);
+        System.out.println("╚═══════════════════════════════════════════════════════════════════════════════════════╝\n");
     }
 
     @Override

@@ -2,6 +2,7 @@ package io.dronefleet.mavlink;
 
 import io.dronefleet.mavlink.annotations.MavlinkMessageInfo;
 import io.dronefleet.mavlink.common.CommonDialect;
+import io.dronefleet.mavlink.common.GimbalDeviceAttitudeStatus;
 import io.dronefleet.mavlink.minimal.MavAutopilot;
 import io.dronefleet.mavlink.minimal.Heartbeat;
 import io.dronefleet.mavlink.minimal.MinimalDialect;
@@ -9,6 +10,8 @@ import io.dronefleet.mavlink.protocol.MavlinkPacket;
 import io.dronefleet.mavlink.protocol.MavlinkPacketReader;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadSerializer;
+import io.dronefleet.mavlink.serialization.payload.reflection.GimbalDeviceAttitudeStatusDeserializer;
+import io.dronefleet.mavlink.serialization.payload.reflection.HeartbeatDeserializer;
 import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadDeserializer;
 import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadSerializer;
 
@@ -231,6 +234,15 @@ public class MavlinkConnection {
      * @throws IOException  If there has been an error reading from the stream.
      */
 
+    private final HeartbeatDeserializer heartbeatDeserializer = new HeartbeatDeserializer();
+    private final GimbalDeviceAttitudeStatusDeserializer gimbalDeviceAttitudeStatusDeserializer = new GimbalDeviceAttitudeStatusDeserializer();
+    private boolean isHeartbeatMessage(int messageId) {
+        return messageId == HEARTBEAT_MESSAGE_ID;
+    }
+
+    private boolean isGimbalDeviceAttitudeStatusMessage(int messageId) {
+        return messageId == GIMBAL_ATTITUDE_MESSAGE_ID;
+    }
     public MavlinkMessage next(Consumer<String> debugPrintFunction) throws IOException {
         readLock.lock();
         try {
@@ -242,6 +254,22 @@ public class MavlinkConnection {
                     byte[] payloadBytes = packet.getPayload();
                     int messageId = packet.getMessageId();
                     Object payload = deserializer.deserialize(messageId, payloadBytes, messageType, debugPrintFunction);
+                    if (isHeartbeatMessage(messageId)) {
+                        try {
+                            Heartbeat otherHeartbeat = heartbeatDeserializer.deserialize(payloadBytes);
+                            String s = "";
+                        } catch (ClassCastException e) {
+                            return null;
+                        }
+                    }
+                    if (isGimbalDeviceAttitudeStatusMessage(messageId)) {
+                        try {
+                            GimbalDeviceAttitudeStatus otherGimbalAttitude = gimbalDeviceAttitudeStatusDeserializer.deserialize(payloadBytes);
+                            String s = "";
+                        } catch (ClassCastException e) {
+                            return null;
+                        }
+                    }
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {
@@ -410,4 +438,7 @@ public class MavlinkConnection {
         }
         return null;
     }
+
+    private static final int HEARTBEAT_MESSAGE_ID = 0;
+    private static final int GIMBAL_ATTITUDE_MESSAGE_ID = 285;
 }

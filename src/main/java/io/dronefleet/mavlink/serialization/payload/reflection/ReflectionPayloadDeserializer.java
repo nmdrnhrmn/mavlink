@@ -30,20 +30,20 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
     @Override
     public <T> T deserialize(int messageId, byte[] payload, Class<T> messageType, Consumer<String> debugPrintFunction) {
         messageTimer.recordStartParsingTimeAndDumpResults(debugPrintFunction);
-        if (isHeartbeatMessage(messageId)) {
-            try {
-                return (T) heartbeatDeserializer.deserialize(payload);
-            } catch (ClassCastException e) {
-                return null;
-            }
-        }
-        if (isGimbalDeviceAttitudeStatusMessage(messageId)) {
-            try {
-                return (T) gimbalDeviceAttitudeStatusDeserializer.deserialize(payload);
-            } catch (ClassCastException e) {
-                return null;
-            }
-        }
+//        if (isHeartbeatMessage(messageId)) {
+//            try {
+//                return (T) heartbeatDeserializer.deserialize(payload);
+//            } catch (ClassCastException e) {
+//                return null;
+//            }
+//        }
+//        if (isGimbalDeviceAttitudeStatusMessage(messageId)) {
+//            try {
+//                return (T) gimbalDeviceAttitudeStatusDeserializer.deserialize(payload);
+//            } catch (ClassCastException e) {
+//                return null;
+//            }
+//        }
         MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);
         if (message == null) {
             throw new IllegalArgumentException(String.format(

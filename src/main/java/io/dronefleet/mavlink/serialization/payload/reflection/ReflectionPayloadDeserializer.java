@@ -40,6 +40,7 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
         }
         if (isGimbalDeviceAttitudeStatusMessage(messageId)) {
             try {
+                messageTimer.endTiming(messageId);
                 return (T) gimbalDeviceAttitudeStatusDeserializer.deserialize(payload);
             } catch (ClassCastException e) {
                 return null;

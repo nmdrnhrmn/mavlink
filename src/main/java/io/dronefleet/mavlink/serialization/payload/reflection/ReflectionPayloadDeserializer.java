@@ -22,8 +22,8 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
 
     private static final WireFieldInfoComparator wireComparator = new WireFieldInfoComparator();
 
-    private static final long MINUTE_IN_MILLIS = 60000;
-    private static long time = MINUTE_IN_MILLIS;
+    private static final long MINUTE_IN_MILLIS = 6000;
+    private static long timeOfSnapshot = 0;
 
     private static final Map<Integer, MessageIdExecutionStatisticsEntry> parsingStats = new HashMap<>();
 
@@ -69,12 +69,12 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
 
     @Override
     public <T> T deserialize(int messageId, byte[] payload, Class<T> messageType) {
-        if (time <= 0) {
-            time = MINUTE_IN_MILLIS;
+        long enteredMethodTime = System.currentTimeMillis();
+        if (enteredMethodTime - timeOfSnapshot >= MINUTE_IN_MILLIS) {
+            timeOfSnapshot = enteredMethodTime;
             dumpParsingStatsToConsole();
             parsingStats.clear();
         }
-        long startTime = System.currentTimeMillis();
         MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);
         if (message == null) {
             throw new IllegalArgumentException(String.format(
@@ -131,17 +131,15 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             e.printStackTrace();
         } finally {
-            long endTime = System.currentTimeMillis();
-            long deltaTime = endTime - startTime;
+            long methodExecutionTime = System.currentTimeMillis() - enteredMethodTime;
             MessageIdExecutionStatisticsEntry stats;
             MessageIdExecutionStatisticsEntry currentStats = parsingStats.get(messageId);
             if (currentStats == null) {
-                stats = new MessageIdExecutionStatisticsEntry(deltaTime);
+                stats = new MessageIdExecutionStatisticsEntry(methodExecutionTime);
             } else {
-                stats = currentStats.produceNextAddingParsingTime(deltaTime);
+                stats = currentStats.produceNextAddingParsingTime(methodExecutionTime);
             }
             parsingStats.put(messageId, stats);
-            time -= deltaTime;
         }
         return null;
     }

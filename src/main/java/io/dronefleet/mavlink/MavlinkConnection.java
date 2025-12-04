@@ -233,12 +233,6 @@ public class MavlinkConnection {
      * @throws EOFException When the stream ends.
      * @throws IOException  If there has been an error reading from the stream.
      */
-
-    private final GimbalDeviceAttitudeStatusDeserializer gimbalDeviceAttitudeStatusDeserializer = new GimbalDeviceAttitudeStatusDeserializer();
-
-    private boolean isGimbalDeviceAttitudeStatusMessage(int messageId) {
-        return messageId == GIMBAL_ATTITUDE_MESSAGE_ID;
-    }
     public MavlinkMessage next(Consumer<String> debugPrintFunction) throws IOException {
         readLock.lock();
         try {
@@ -418,6 +412,4 @@ public class MavlinkConnection {
         }
         return null;
     }
-
-    private static final int GIMBAL_ATTITUDE_MESSAGE_ID = 285;
 }

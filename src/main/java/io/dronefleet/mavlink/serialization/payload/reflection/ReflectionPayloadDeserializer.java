@@ -1,11 +1,8 @@
 package io.dronefleet.mavlink.serialization.payload.reflection;
 
-import com.sun.xml.internal.ws.api.message.Message;
-
 import io.dronefleet.mavlink.annotations.MavlinkFieldInfo;
 import io.dronefleet.mavlink.annotations.MavlinkMessageBuilder;
 import io.dronefleet.mavlink.annotations.MavlinkMessageInfo;
-import io.dronefleet.mavlink.minimal.Heartbeat;
 import io.dronefleet.mavlink.serialization.MavlinkSerializationException;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
 import io.dronefleet.mavlink.util.EnumValue;
@@ -32,28 +29,9 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
 
     private void dumpParsingStatsToConsole() {
         if (parsingStats.isEmpty()) {
-            System.out.println("No parsing statistics available.");
+            System.out.println("MavlinkParsingStats: No statistics available");
             return;
         }
-
-        System.out.println("\n╔════════════════════════════════════════════════════════════════════════╗");
-        System.out.println("║                    MAVLink Parsing Statistics                          ║");
-        System.out.println("╠════════════╦═══════════════╦═══════════════════╦═══════════════════════╣");
-        System.out.println("║ Message ID ║ Times Parsed  ║  Total Time (ms)  ║   Avg Time (ms)       ║");
-        System.out.println("╠════════════╬═══════════════╬═══════════════════╬═══════════════════════╣");
-
-        parsingStats.entrySet().stream()
-            .sorted((e1, e2) -> Long.compare(e2.getValue().getCombinedParsingTime(), e1.getValue().getCombinedParsingTime()))
-            .forEach(entry -> {
-                int messageId = entry.getKey();
-                MessageIdExecutionStatisticsEntry stats = entry.getValue();
-                long totalTime = stats.getCombinedParsingTime();
-                int count = stats.getReceivedTimes();
-                double avgTime = (double) totalTime / count;
-
-                System.out.printf("║ %-10d ║ %-13d ║ %-17d ║ %-21.3f ║%n", 
-                    messageId, count, totalTime, avgTime);
-            });
 
         long totalMessages = parsingStats.values().stream()
             .mapToInt(MessageIdExecutionStatisticsEntry::getReceivedTimes)
@@ -62,10 +40,25 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
             .mapToLong(MessageIdExecutionStatisticsEntry::getCombinedParsingTime)
             .sum();
 
-        System.out.println("╠════════════╩═══════════════╩═══════════════════╩═══════════════════════╣");
-        System.out.printf("║ TOTAL: %d messages parsed in %d ms (avg: %.3f ms/msg)%n", 
-            totalMessages, totalTime, (double) totalTime / totalMessages);
-        System.out.println("╚════════════════════════════════════════════════════════════════════════╝\n");
+        System.out.println("MavlinkParsingStats: === Parsing Statistics (sorted by total time) ===");
+        
+        parsingStats.entrySet().stream()
+            .sorted((e1, e2) -> Long.compare(e2.getValue().getCombinedParsingTime(), e1.getValue().getCombinedParsingTime()))
+            .forEach(entry -> {
+                int messageId = entry.getKey();
+                MessageIdExecutionStatisticsEntry stats = entry.getValue();
+                long totalTimeForMsg = stats.getCombinedParsingTime();
+                int count = stats.getReceivedTimes();
+                double avgTime = (double) totalTimeForMsg / count;
+                double percentOfTotal = (double) totalTimeForMsg / totalTime * 100;
+
+                System.out.printf("  MavlinkParsingStats: MsgID[%d] count=%d, total=%dms, avg=%.3fms, %%time=%.1f%%%n", 
+                    messageId, count, totalTimeForMsg, avgTime, percentOfTotal);
+            });
+
+        double avgTimeOverall = (double) totalTime / totalMessages;
+        System.out.printf("MavlinkParsingStats: TOTAL=%d messages, time=%dms, avg=%.3fms/msg%n", 
+            totalMessages, totalTime, avgTimeOverall);
     }
 
     @Override

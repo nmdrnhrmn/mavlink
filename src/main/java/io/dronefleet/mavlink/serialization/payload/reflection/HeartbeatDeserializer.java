@@ -97,37 +97,37 @@ public class HeartbeatDeserializer {
         }
 
         long customMode = ((payload[0] & 0xFFL)) |
-                         ((payload[1] & 0xFFL) << 8) |
-                         ((payload[2] & 0xFFL) << 16) |
-                         ((payload[3] & 0xFFL) << 24);
-        
+            ((payload[1] & 0xFFL) << 8) |
+            ((payload[2] & 0xFFL) << 16) |
+            ((payload[3] & 0xFFL) << 24);
+
         int typeValue = payload[4] & 0xFF;
-        EnumValue<MavType> type = (typeValue < MAV_TYPE_LOOKUP.length) 
-            ? EnumValue.of(MAV_TYPE_LOOKUP[typeValue])
+        EnumValue<MavType> type = (typeValue < MAV_TYPE_LOOKUP.length)
+            ? EnumValue.valueAndEntry(typeValue, MAV_TYPE_LOOKUP[typeValue])
             : EnumValue.create(typeValue);
-        
+
         int autopilotValue = payload[5] & 0xFF;
         EnumValue<MavAutopilot> autopilot = (autopilotValue < MAV_AUTOPILOT_LOOKUP.length)
-            ? EnumValue.of(MAV_AUTOPILOT_LOOKUP[autopilotValue])
+            ? EnumValue.valueAndEntry(autopilotValue, MAV_AUTOPILOT_LOOKUP[autopilotValue])
             : EnumValue.create(autopilotValue);
-        
+
         int baseModeValue = payload[6] & 0xFF;
         EnumValue<MavModeFlag> baseMode = EnumValue.create(baseModeValue);
-        
+
         int systemStatusValue = payload[7] & 0xFF;
         EnumValue<MavState> systemStatus = (systemStatusValue < MAV_STATE_LOOKUP.length)
-            ? EnumValue.of(MAV_STATE_LOOKUP[systemStatusValue])
+            ? EnumValue.valueAndEntry(systemStatusValue, MAV_STATE_LOOKUP[systemStatusValue])
             : EnumValue.create(systemStatusValue);
-        
+
         int mavlinkVersion = payload[8] & 0xFF;
-        
+
         return Heartbeat.builder()
-                .type(type)
-                .autopilot(autopilot)
-                .baseMode(baseMode)
-                .customMode(customMode)
-                .systemStatus(systemStatus)
-                .mavlinkVersion(mavlinkVersion)
-                .build();
+            .type(type)
+            .autopilot(autopilot)
+            .baseMode(baseMode)
+            .customMode(customMode)
+            .systemStatus(systemStatus)
+            .mavlinkVersion(mavlinkVersion)
+            .build();
     }
 }

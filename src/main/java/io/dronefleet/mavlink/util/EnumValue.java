@@ -7,6 +7,10 @@ import java.util.Collection;
 
 public class EnumValue<T extends Enum> {
 
+    public static <T extends Enum> EnumValue<T> valueAndEntry(int value, T entry) {
+        return new EnumValue<>(value, entry);
+    }
+
     public static <T extends Enum> EnumValue<T> of(T entry) {
         int value = MavlinkReflection.getEnumValue(entry);
         return new EnumValue<>(value, entry);

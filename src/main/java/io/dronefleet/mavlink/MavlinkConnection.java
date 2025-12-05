@@ -19,9 +19,10 @@ import io.dronefleet.mavlink.protocol.MavlinkPacket;
 import io.dronefleet.mavlink.protocol.MavlinkPacketReader;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadSerializer;
-import io.dronefleet.mavlink.serialization.payload.MixedPayloadDeserializer;
 import io.dronefleet.mavlink.serialization.payload.MessageTimer;
 import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadSerializer;
+import io.dronefleet.mavlink.serialization.payload.reflection.MixedPayloadDeserializer;
+
 /**
  * <p>Represents a Mavlink connection. This class is responsible for mid-to-low-level function of Mavlink communication.
  * A {@code MavlinkConnection} is responsible for the following:</p>
@@ -33,6 +34,7 @@ import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadS
  */
 public class MavlinkConnection {
     private final MessageTimer messageTimer = new MessageTimer();
+
     /**
      * Builds MavlinkConnection instances.
      */

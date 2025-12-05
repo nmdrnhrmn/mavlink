@@ -19,7 +19,7 @@ import io.dronefleet.mavlink.protocol.MavlinkPacket;
 import io.dronefleet.mavlink.protocol.MavlinkPacketReader;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
 import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadSerializer;
-import io.dronefleet.mavlink.serialization.payload.MessageTimer;
+import io.dronefleet.mavlink.serialization.payload.MessageParsingTimeLogger;
 import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadSerializer;
 import io.dronefleet.mavlink.serialization.payload.reflection.MixedPayloadDeserializer;
 
@@ -33,7 +33,7 @@ import io.dronefleet.mavlink.serialization.payload.reflection.MixedPayloadDeseri
  * </ul>
  */
 public class MavlinkConnection {
-    private final MessageTimer messageTimer = new MessageTimer();
+    private final MessageParsingTimeLogger messageParsingTimeLogger = new MessageParsingTimeLogger();
 
     /**
      * Builds MavlinkConnection instances.
@@ -240,9 +240,9 @@ public class MavlinkConnection {
                 if (messageType != null) {
                     byte[] payloadBytes = packet.getPayload();
                     int messageId = packet.getMessageId();
-                    messageTimer.recordStartParsingTimeAndDumpResults(debugPrintFunction);
+                    messageParsingTimeLogger.recordStartParsingTimeAndDumpResults(debugPrintFunction);
                     Object payload = deserializer.deserialize(messageId, payloadBytes, messageType);
-                    messageTimer.endTiming(messageId);
+                    messageParsingTimeLogger.endTiming(messageId);
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {

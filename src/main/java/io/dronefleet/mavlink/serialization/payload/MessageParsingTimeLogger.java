@@ -4,8 +4,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public class MessageTimer {
+public class MessageParsingTimeLogger {
     private static final long DUMP_INTERVAL_MS = 30000;
+    private static final double PERCENT_OF_TOTAL_THRESHOLD_TO_BE_VISIBLE_IN_STATS = 5;
 
     private final Map<Integer, MessageIdExecutionStatisticsEntry> parsingStats = new HashMap<>();
     private long timeOfSnapshot = 0;
@@ -47,7 +48,7 @@ public class MessageTimer {
 
         StringBuilder sb = new StringBuilder();
         sb.append("\n╔═══════════════════════════════════════════════════════════════════════════════════════╗\n");
-        sb.append("║                          MAVLink Parsing Statistics                                   ║\n");
+        sb.append("║                             MAVLink Parsing Statistics                                ║\n");
         sb.append("╠════════════╦═══════════════╦═══════════════════╦═══════════════════════╦══════════════╣\n");
         sb.append("║ Message ID ║ Times Parsed  ║  Total Time (ms)  ║   Avg Time (ms)       ║   % of Time  ║\n");
         sb.append("╠════════════╬═══════════════╬═══════════════════╬═══════════════════════╬══════════════╣\n");
@@ -61,9 +62,10 @@ public class MessageTimer {
                 int count = stats.getReceivedTimes();
                 double avgTime = (double) totalTimeForMsg / count;
                 double percentOfTotal = (double) totalTimeForMsg / totalTime * 100;
-
-                sb.append(String.format("║ %-10d ║ %-13d ║ %-17d ║ %-21.3f ║ %-12.1f ║%n",
-                    messageId, count, totalTimeForMsg, avgTime, percentOfTotal));
+                if (percentOfTotal >= PERCENT_OF_TOTAL_THRESHOLD_TO_BE_VISIBLE_IN_STATS) {
+                    sb.append(String.format("║ %-10d ║ %-13d ║ %-17d ║ %-21.3f ║ %-12.1f ║%n",
+                        messageId, count, totalTimeForMsg, avgTime, percentOfTotal));
+                }
             });
 
         long percentOfTotal = totalTime * 100 / DUMP_INTERVAL_MS;

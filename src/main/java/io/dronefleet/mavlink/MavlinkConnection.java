@@ -1,25 +1,9 @@
 package io.dronefleet.mavlink;
 
-import io.dronefleet.mavlink.annotations.MavlinkMessageInfo;
-import io.dronefleet.mavlink.common.CommonDialect;
-import io.dronefleet.mavlink.common.GimbalDeviceAttitudeStatus;
-import io.dronefleet.mavlink.minimal.MavAutopilot;
-import io.dronefleet.mavlink.minimal.Heartbeat;
-import io.dronefleet.mavlink.minimal.MinimalDialect;
-import io.dronefleet.mavlink.protocol.MavlinkPacket;
-import io.dronefleet.mavlink.protocol.MavlinkPacketReader;
-import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
-import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadSerializer;
-import io.dronefleet.mavlink.serialization.payload.reflection.GimbalDeviceAttitudeStatusDeserializer;
-import io.dronefleet.mavlink.serialization.payload.reflection.HeartbeatDeserializer;
-import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadDeserializer;
-import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadSerializer;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +11,17 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
+import io.dronefleet.mavlink.annotations.MavlinkMessageInfo;
+import io.dronefleet.mavlink.minimal.Heartbeat;
+import io.dronefleet.mavlink.minimal.MavAutopilot;
+import io.dronefleet.mavlink.minimal.MinimalDialect;
+import io.dronefleet.mavlink.protocol.MavlinkPacket;
+import io.dronefleet.mavlink.protocol.MavlinkPacketReader;
+import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
+import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadSerializer;
+import io.dronefleet.mavlink.serialization.payload.MixedPayloadDeserializer;
+import io.dronefleet.mavlink.serialization.payload.MessageTimer;
+import io.dronefleet.mavlink.serialization.payload.reflection.ReflectionPayloadSerializer;
 /**
  * <p>Represents a Mavlink connection. This class is responsible for mid-to-low-level function of Mavlink communication.
  * A {@code MavlinkConnection} is responsible for the following:</p>
@@ -37,6 +32,7 @@ import java.util.function.Consumer;
  * </ul>
  */
 public class MavlinkConnection {
+    private final MessageTimer messageTimer = new MessageTimer();
     /**
      * Builds MavlinkConnection instances.
      */
@@ -103,18 +99,17 @@ public class MavlinkConnection {
                 out,
                 dialects,
                 defaultDialect,
-                new ReflectionPayloadDeserializer(),
+                new MixedPayloadDeserializer(),
                 new ReflectionPayloadSerializer()
             );
         }
     }
 
     /**
-     * The default dialect for systems which have not yet been associated
-     * with a specific dialect.
+     * The default dialect that accepts only heartbeats to prevent unwanted
+     * message flooding.
      */
-    private static MavlinkDialect COMMON_DIALECT = new CommonDialect();
-    private static MavlinkDialect MINIMAL_DIALECT = new MinimalDialect();
+    private static final MavlinkDialect MINIMAL_DIALECT = new MinimalDialect();
 
     /**
      * Creates a new builder for the specified input/output streams.
@@ -243,7 +238,9 @@ public class MavlinkConnection {
                 if (messageType != null) {
                     byte[] payloadBytes = packet.getPayload();
                     int messageId = packet.getMessageId();
-                    Object payload = deserializer.deserialize(messageId, payloadBytes, messageType, debugPrintFunction);
+                    messageTimer.recordStartParsingTimeAndDumpResults(debugPrintFunction);
+                    Object payload = deserializer.deserialize(messageId, payloadBytes, messageType);
+                    messageTimer.endTiming(messageId);
                     if (payload instanceof Heartbeat) {
                         Heartbeat heartbeat = (Heartbeat) payload;
                         if (dialects.containsKey(heartbeat.autopilot().entry())) {

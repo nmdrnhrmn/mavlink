@@ -1,14 +1,5 @@
 package io.dronefleet.mavlink.serialization.payload.reflection;
 
-import io.dronefleet.mavlink.annotations.MavlinkFieldInfo;
-import io.dronefleet.mavlink.annotations.MavlinkMessageBuilder;
-import io.dronefleet.mavlink.annotations.MavlinkMessageInfo;
-import io.dronefleet.mavlink.serialization.MavlinkSerializationException;
-import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
-import io.dronefleet.mavlink.serialization.payload.MessageTimer;
-import io.dronefleet.mavlink.util.EnumValue;
-import io.dronefleet.mavlink.util.WireFieldInfoComparator;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -16,36 +7,27 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
+
+import io.dronefleet.mavlink.annotations.MavlinkFieldInfo;
+import io.dronefleet.mavlink.annotations.MavlinkMessageBuilder;
+import io.dronefleet.mavlink.annotations.MavlinkMessageInfo;
+import io.dronefleet.mavlink.serialization.MavlinkSerializationException;
+import io.dronefleet.mavlink.serialization.payload.MavlinkPayloadDeserializer;
+import io.dronefleet.mavlink.util.EnumValue;
+import io.dronefleet.mavlink.util.WireFieldInfoComparator;
 
 public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer {
 
     private static final WireFieldInfoComparator wireComparator = new WireFieldInfoComparator();
-    private final MessageTimer messageTimer = new MessageTimer();
-    private final HeartbeatDeserializer heartbeatDeserializer = new HeartbeatDeserializer();
-    private final GimbalDeviceAttitudeStatusDeserializer gimbalDeviceAttitudeStatusDeserializer = new GimbalDeviceAttitudeStatusDeserializer();
 
     @Override
-    public <T> T deserialize(int messageId, byte[] payload, Class<T> messageType, Consumer<String> debugPrintFunction) {
-        messageTimer.recordStartParsingTimeAndDumpResults(debugPrintFunction);
-        if (isHeartbeatMessage(messageId)) {
-            try {
-                messageTimer.endTiming(messageId);
-                return (T) heartbeatDeserializer.deserialize(payload);
-            } catch (ClassCastException e) {
-                return null;
-            }
-        }
-        if (isGimbalDeviceAttitudeStatusMessage(messageId)) {
-            try {
-                messageTimer.endTiming(messageId);
-                return (T) gimbalDeviceAttitudeStatusDeserializer.deserialize(payload);
-            } catch (ClassCastException e) {
-                return null;
-            }
-        }
+    public <T> T deserialize(int messageId, byte[] payload, Class<T> messageType) {
         MavlinkMessageInfo message = messageType.getAnnotation(MavlinkMessageInfo.class);
         if (message == null) {
             throw new IllegalArgumentException(String.format(
@@ -101,18 +83,8 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
             return (T) builder.getClass().getMethod("build").invoke(builder);
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             e.printStackTrace();
-        } finally {
-            messageTimer.endTiming(messageId);
         }
         return null;
-    }
-
-    private boolean isHeartbeatMessage(int messageId) {
-        return messageId == HEARTBEAT_MESSAGE_ID;
-    }
-
-    private boolean isGimbalDeviceAttitudeStatusMessage(int messageId) {
-        return messageId == GIMBAL_ATTITUDE_MESSAGE_ID;
     }
 
     private Object deserialize(Type fieldType, byte[] data, int offset, int length, MavlinkFieldInfo field) {
@@ -219,6 +191,4 @@ public class ReflectionPayloadDeserializer implements MavlinkPayloadDeserializer
         return Collections.unmodifiableList(result);
     }
 
-    private static final int HEARTBEAT_MESSAGE_ID = 0;
-    private static final int GIMBAL_ATTITUDE_MESSAGE_ID = 285;
 }

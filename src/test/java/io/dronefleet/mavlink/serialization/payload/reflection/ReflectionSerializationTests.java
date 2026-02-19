@@ -68,7 +68,7 @@ public class ReflectionSerializationTests {
     @Test
     public void test() {
         byte[] bytes = serializer.serialize(expected);
-        Object actual = deserializer.deserialize(bytes, expected.getClass());
+        Object actual = deserializer.deserialize(0,bytes, expected.getClass());
         assertEquals(expected, actual);
     }
 

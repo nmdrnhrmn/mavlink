@@ -47,11 +47,7 @@ public class MessageParsingTimeLogger {
             .sum();
 
         StringBuilder sb = new StringBuilder();
-        sb.append("\n╔═══════════════════════════════════════════════════════════════════════════════════════╗\n");
-        sb.append("║                             MAVLink Parsing Statistics                                ║\n");
-        sb.append("╠════════════╦═══════════════╦═══════════════════╦═══════════════════════╦══════════════╣\n");
-        sb.append("║ Message ID ║ Times Parsed  ║  Total Time (ms)  ║   Avg Time (ms)       ║   % of Time  ║\n");
-        sb.append("╠════════════╬═══════════════╬═══════════════════╬═══════════════════════╬══════════════╣\n");
+        sb.append("\n=== BEGIN Mavlink Parsing Stats ===\n\n");
 
         parsingStats.entrySet().stream()
             .sorted((e1, e2) -> Long.compare(e2.getValue().getCombinedParsingTime(), e1.getValue().getCombinedParsingTime()))
@@ -63,17 +59,16 @@ public class MessageParsingTimeLogger {
                 double avgTime = (double) totalTimeForMsg / count;
                 double percentOfTotal = (double) totalTimeForMsg / totalTime * 100;
                 if (percentOfTotal >= PERCENT_OF_TOTAL_THRESHOLD_TO_BE_VISIBLE_IN_STATS) {
-                    sb.append(String.format("║ %-10d ║ %-13d ║ %-17d ║ %-21.3f ║ %-12.1f ║%n",
+                    sb.append(String.format("ID %d, x%d msg, %dms (%.2f avg), %.1f%% of parsing time%n",
                         messageId, count, totalTimeForMsg, avgTime, percentOfTotal));
                 }
             });
 
         long percentOfTotal = totalTime * 100 / DUMP_INTERVAL_MS;
         double avgTimeOverall = (double) totalTime / totalMessages;
-        sb.append("╠════════════╩═══════════════╩═══════════════════╩═══════════════════════╩══════════════╣\n");
-        sb.append(String.format("║ TOTAL: %d messages parsed in %d ms - %d%% of total, avg: %.3f ms/msg\n",
-            totalMessages, totalTime, percentOfTotal, avgTimeOverall));
-        sb.append("╚═══════════════════════════════════════════════════════════════════════════════════════╝\n");
+        sb.append(String.format("\nTOTAL: x%d msg in %dms (%.2f avg), %d%% of total CPU time\n",
+            totalMessages, totalTime, avgTimeOverall, percentOfTotal));
+        sb.append("\n=== END Mavlink Parsing Stats ===\n");
 
         printFunction.accept(sb.toString());
     }
